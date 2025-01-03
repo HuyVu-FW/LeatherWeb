@@ -1,15 +1,14 @@
-import { useCallback, useState, FC } from "react";
-import { Button, Card, CardProps, Box, styled } from "@mui/material";
+import { useCallback, useState } from "react";
+import { Button, Card, Box, styled } from "@mui/material";
 import Link from "next/link";
 import * as yup from "yup";
 import { useFormik } from "formik";
 import { H1, H6 } from "components/Typography";
 import BazaarImage from "components/BazaarImage";
 import BazaarTextField from "components/BazaarTextField";
-import SocialButtons from "./SocialButtons";
 import EyeToggleButton from "./EyeToggleButton";
 import { FlexBox, FlexRowCenter } from "components/flex-box";
-///ct
+import { useRouter } from "next/router";
 
 
 const fbStyle = { background: "#3B5998", color: "white" };
@@ -17,18 +16,12 @@ const googleStyle = { background: "#4285F4", color: "white" };
 
 type WrapperProps = { passwordVisibility?: boolean };
 
-export const Wrapper = styled<FC<WrapperProps & CardProps>>(
-  ({ children, passwordVisibility, ...rest }) => (
-    <Card {...rest}>{children}</Card>
-  )
-)<CardProps>(({ theme, passwordVisibility }) => ({
+export const Wrapper = styled(Card)<WrapperProps>(({ theme, passwordVisibility }) => ({
   width: 500,
   padding: "2rem 3rem",
   [theme.breakpoints.down("sm")]: { width: "100%" },
   ".passwordEye": {
-    color: passwordVisibility
-      ? theme.palette.grey[600]
-      : theme.palette.grey[400],
+    color: passwordVisibility ? theme.palette.grey[600] : theme.palette.grey[400],
   },
   ".facebookButton": { marginBottom: 10, ...fbStyle, "&:hover": fbStyle },
   ".googleButton": { ...googleStyle, "&:hover": googleStyle },
@@ -36,6 +29,8 @@ export const Wrapper = styled<FC<WrapperProps & CardProps>>(
 }));
 
 const Login = () => {
+  const router = useRouter();
+
   const [passwordVisibility, setPasswordVisibility] = useState(false);
 
   const togglePasswordVisibility = useCallback(() => {
@@ -43,17 +38,28 @@ const Login = () => {
   }, []);
 
   const handleFormSubmit = async (values: any) => {
-    console.log(values);
-  };
+    try {
+      const response = await fetch("http://localhost:8080/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
 
-  const handleGoogleLogin = () => {
-    // Thực hiện login với Google, ví dụ gọi API Google OAuth
-    console.log("Google login initiated");
-  };
-  
-  const handleFacebookLogin = () => {
-    // Thực hiện login với Facebook, ví dụ gọi API Facebook OAuth
-    console.log("Facebook login initiated");
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      console.log("Login successful:", data);
+      router.push("/");
+      // Handle successful login, e.g., save token, redirect, etc.
+    } catch (error) {
+      console.error("Login failed:", error);
+      // Handle login failure, e.g., show error message
+    }
   };
 
   const { values, errors, touched, handleBlur, handleChange, handleSubmit } =
@@ -72,23 +78,23 @@ const Login = () => {
         />
 
         <H1 textAlign="center" mt={1} mb={4} fontSize={16}>
-          Welcome To Bazaar
+          Welcome To My Store
         </H1>
 
         <BazaarTextField
           mb={1.5}
           fullWidth
-          name="email"
           size="small"
-          type="email"
+          type="text"
+          name="username"
           variant="outlined"
           onBlur={handleBlur}
-          value={values.email}
+          value={values.username}
           onChange={handleChange}
-          label="Email or Phone Number"
-          placeholder="exmple@mail.com"
-          error={!!touched.email && !!errors.email}
-          helperText={(touched.email && errors.email) as string}
+          label="Username or Phone Number"
+          placeholder="example@mail.com"
+          error={!!touched.username && !!errors.username}
+          helperText={(touched.username && errors.username) as string}
         />
 
         <BazaarTextField
@@ -127,13 +133,8 @@ const Login = () => {
         </Button>
       </form>
 
-      {/* Google Login Button */}
-   
-
-      <SocialButtons handleGoogle={handleGoogleLogin} handleFacebook={handleFacebookLogin} />
-
       <FlexRowCenter mt="1.25rem">
-        <Box>Don&apos;t have account?</Box>
+        <Box>Don&apos;t have an account?</Box>
         <Link href="/signup">
           <H6 ml={1} borderBottom="1px solid" borderColor="grey.900">
             Sign Up
@@ -159,11 +160,11 @@ const Login = () => {
   );
 };
 
-const initialValues = { email: "", password: "" };
+const initialValues = { username: "", password: "" };
 
 const formSchema = yup.object().shape({
+  username: yup.string().required("Username is required"),
   password: yup.string().required("Password is required"),
-  email: yup.string().email("invalid email").required("Email is required"),
 });
 
 export default Login;
